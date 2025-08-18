@@ -278,8 +278,8 @@ app.post("/api/send-order-received-email", async (req, res) => {
 
     // Use Resend's verified domain for sending emails
     const { data, error } = await resend.emails.send({
-      from: `${customerName} <orders@resend.dev>`,
-      to: [process.env.EMAIL_USER], // Send TO owner's email
+      from: `${customerName} <onboarding@resend.dev>`, // Use Resend's verified domain
+      to: [process.env.EMAIL_USER], // Send TO owner's email (must be your verified email for free tier)
       subject: emailTemplate.subject,
       html: emailTemplate.html,
       replyTo: customerEmail, // Reply will go TO customer
@@ -357,7 +357,7 @@ app.post("/api/test-email", async (req, res) => {
     console.log("To:", process.env.EMAIL_USER);
 
     const { data, error } = await resend.emails.send({
-      from: `${customerName} <orders@resend.dev>`,
+      from: "Chicken Valley Orders <onboarding@resend.dev>", // Use Resend's verified domain
       to: [process.env.EMAIL_USER], // Send TO owner's email
       subject: "🧪 Test Email - Chicken Valley API",
       replyTo: customerEmail, // Reply will go TO customer
