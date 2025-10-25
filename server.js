@@ -50,7 +50,6 @@ try {
   process.exit(1);
 }
 
-// Email template for order received notification to owner
 const createOrderReceivedTemplate = (orderData) => {
   const {
     customerName,
@@ -60,10 +59,18 @@ const createOrderReceivedTemplate = (orderData) => {
     totalAmount,
     paymentMethod,
     paymentStatus,
+    deliveryAddress, // ✅ New parameter
+    orderType, // ✅ New parameter
   } = orderData;
 
+  // Determine if it's a pickup or delivery order
+  const isPickup = orderType === "pickup";
+  const orderTypeIcon = isPickup ? "🚶" : "🚚";
+  const orderTypeText = isPickup ? "Pickup Order" : "Delivery Order";
+  const orderTypeColor = isPickup ? "#e74c3c" : "#3498db";
+
   return {
-    subject: `New Order #${orderId} - ${customerName}`,
+    subject: `${orderTypeIcon} New ${orderTypeText} #${orderId} - ${customerName}`,
     html: `<!DOCTYPE html>
 <html>
 <head>
@@ -79,13 +86,17 @@ const createOrderReceivedTemplate = (orderData) => {
     <!-- Header Section -->
     <div style="background-color: #1a3c34; padding: 30px; text-align: center; color: #ffffff; border-top-left-radius: 8px; border-top-right-radius: 8px;">
       <h1 style="margin: 0; font-size: 24px; font-weight: 500;">Chicken Valley</h1>
-      <p style="margin: 8px 0 0 0; font-size: 16px; font-weight: 300;">New Order Notification</p>
+      <p style="margin: 8px 0 0 0; font-size: 16px; font-weight: 300;">${orderTypeIcon} ${orderTypeText} Notification</p>
     </div>
     
     <!-- Customer Info Section -->
     <div style="padding: 25px; border-bottom: 1px solid #e0e0e0;">
-      <h2 style="margin: 0; font-size: 20px; font-weight: 500; color: #333333;">New Order from ${customerName}</h2>
-      <p style="margin: 10px 0 0 0; font-size: 14px; color: #666666;">Customer will collect the order in person</p>
+      <h2 style="margin: 0; font-size: 20px; font-weight: 500; color: #333333;">${orderTypeIcon} New ${orderTypeText} from ${customerName}</h2>
+      <p style="margin: 10px 0 0 0; font-size: 14px; color: #666666;">${
+        isPickup
+          ? "Customer will collect the order in person"
+          : "Order will be delivered to customer address"
+      }</p>
     </div>
     
     <!-- Order Details Section -->
@@ -103,6 +114,39 @@ const createOrderReceivedTemplate = (orderData) => {
           <div style="font-size: 20px; color: #28a745;">✔</div>
         </div>
       </div>
+      
+      <!-- Order Type Badge -->
+      <div style="background-color: ${orderTypeColor}; padding: 15px; border-radius: 6px; margin-bottom: 20px; text-align: center;">
+        <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #ffffff;">${orderTypeIcon} ${orderTypeText.toUpperCase()}</h3>
+      </div>
+      
+      <!-- Delivery Address or Pickup Info Card -->
+      ${
+        !isPickup && deliveryAddress
+          ? `
+      <div style="background-color: #e3f2fd; padding: 20px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid ${orderTypeColor};">
+        <h4 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: #333333;">🚚 Delivery Address</h4>
+        <p style="margin: 0; font-size: 14px; color: #333333; line-height: 1.6; white-space: pre-wrap;">${deliveryAddress}</p>
+        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #90caf9;">
+          <p style="margin: 0; font-size: 13px; color: #1976d2; font-weight: 600;">📦 Delivery Fee: £2.50</p>
+          <p style="margin: 5px 0 0 0; font-size: 13px; color: #666666;">⏱️ Estimated Delivery Time: 30-45 mins</p>
+        </div>
+      </div>
+      `
+          : `
+      <div style="background-color: #ffebee; padding: 20px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid ${orderTypeColor};">
+        <h4 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: #333333;">🚶 Pickup Information</h4>
+        <p style="margin: 0; font-size: 14px; color: #333333; line-height: 1.6;">
+          <strong>📍 Pickup Location:</strong><br>
+          8 East Street, Horsham RH12 1HL
+        </p>
+        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #ef9a9a;">
+          <p style="margin: 0; font-size: 13px; color: #c62828; font-weight: 600;">Customer will collect from store</p>
+          <p style="margin: 5px 0 0 0; font-size: 13px; color: #666666;">⏱️ Ready in: 10-20 mins</p>
+        </div>
+      </div>
+      `
+      }
       
       <!-- Order Info Cards -->
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
@@ -158,7 +202,7 @@ const createOrderReceivedTemplate = (orderData) => {
                 }</p>
               </div>
               <div style="text-align: right;">
-                <p style="margin: 0; font-size: 14px; font-weight: 600; color: #1a3c34;">$${item.price.toFixed(
+                <p style="margin: 0; font-size: 14px; font-weight: 600; color: #1a3c34;">£${item.price.toFixed(
                   2
                 )}</p>
               </div>
@@ -172,15 +216,26 @@ const createOrderReceivedTemplate = (orderData) => {
       <!-- Total Amount Section -->
       <div style="background-color: #f8f9fa; padding: 20px; border-radius: 6px; text-align: center; margin-bottom: 20px; border-left: 4px solid #1a3c34;">
         <h3 style="margin: 0; font-size: 18px; font-weight: 500; color: #333333;">Total Amount</h3>
-        <p style="margin: 8px 0 0 0; font-size: 24px; font-weight: 600; color: #1a3c34;">$${totalAmount.toFixed(
+        <p style="margin: 8px 0 0 0; font-size: 24px; font-weight: 600; color: #1a3c34;">£${totalAmount.toFixed(
           2
         )}</p>
+        ${
+          !isPickup
+            ? '<p style="margin: 5px 0 0 0; font-size: 12px; color: #666666;">(Including £2.50 delivery fee)</p>'
+            : ""
+        }
       </div>
       
       <!-- Action Required Section -->
-      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #1a3c34;">
-        <h4 style="margin: 0; font-size: 16px; font-weight: 500; color: #333333;">Action Required</h4>
-        <p style="margin: 0; font-size: 14px; color: #666666;">Please prepare the order for customer pickup and update the order status accordingly.</p>
+      <div style="background-color: #fff3cd; padding: 20px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
+        <h4 style="margin: 0; font-size: 16px; font-weight: 600; color: #856404;">⚠️ Action Required</h4>
+        <p style="margin: 8px 0 0 0; font-size: 14px; color: #856404;">
+          ${
+            isPickup
+              ? "Please prepare the order for customer pickup and notify when ready."
+              : "Please prepare the order for delivery and arrange driver dispatch."
+          }
+        </p>
       </div>
       
       <!-- Footer Message -->
@@ -202,9 +257,16 @@ const createOrderReceivedTemplate = (orderData) => {
 </body>
 </html>`,
     text: `
-🆕 New Order Received - Payment Confirmed #${orderId}
+🆕 New ${orderTypeText} - Payment Confirmed #${orderId}
 
-New Order Received from ${customerName}! 🎉
+${orderTypeIcon} New ${orderTypeText} from ${customerName}! 🎉
+
+Order Type: ${orderTypeText}
+${
+  !isPickup && deliveryAddress
+    ? `\nDelivery Address:\n${deliveryAddress}\nDelivery Fee: £2.50\nEstimated Time: 30-45 mins`
+    : "\nPickup Location: 8 East Street, Horsham RH12 1HL\nReady in: 10-20 mins"
+}
 
 Payment Status: ${paymentStatus || "Confirmed"}
 Payment Method: ${paymentMethod || "Online Payment"}
@@ -218,22 +280,25 @@ Order Time: ${new Date().toLocaleTimeString()}
 
 Items:
 ${items
-  .map((item) => `${item.name} x${item.quantity} - $${item.price.toFixed(2)}`)
+  .map((item) => `${item.name} x${item.quantity} - £${item.price.toFixed(2)}`)
   .join("\n")}
 
-Total Amount: $${totalAmount.toFixed(2)}
+Total Amount: £${totalAmount.toFixed(2)}${
+      !isPickup ? " (Including £2.50 delivery fee)" : ""
+    }
 
 Action Required:
-1. Start preparing this order
-2. Update order status in system
-3. Notify customer when ready
+${
+  isPickup
+    ? "1. Start preparing this order\n2. Update order status in system\n3. Notify customer when ready for pickup"
+    : "1. Start preparing this order\n2. Arrange driver for delivery\n3. Update order status and notify customer"
+}
 
 This is an automated notification for the owner.
 Please process this order promptly!
     `,
   };
 };
-
 // API endpoint to send order received email to owner after payment
 app.post("/api/send-order-received-email", async (req, res) => {
   try {
@@ -245,6 +310,8 @@ app.post("/api/send-order-received-email", async (req, res) => {
       totalAmount,
       paymentMethod,
       paymentStatus,
+      deliveryAddress, // ✅ Add this
+      orderType, // ✅ Add this
     } = req.body;
 
     // Validate required fields
@@ -265,6 +332,8 @@ app.post("/api/send-order-received-email", async (req, res) => {
       totalAmount,
       paymentMethod: paymentMethod || "Online Payment",
       paymentStatus: paymentStatus || "Confirmed",
+      deliveryAddress: deliveryAddress || null, // ✅ Add this
+      orderType: orderType || "pickup", // ✅ Add this
     });
 
     // Send email FROM customer's email TO owner's email using Resend
